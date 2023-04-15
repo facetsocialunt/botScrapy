@@ -299,4 +299,4 @@ async def on_ready():
 #################
 # Token del bot de Discord
 #################
-client.run(os.environ["FACETSOCIAL_TOKEN"])
+client.run(SECRET_TOKEN_BOT)
