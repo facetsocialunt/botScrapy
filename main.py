@@ -8,8 +8,11 @@ from ScrapyProcesadores import ScrapyProcesadores
 from ScrapyProcesadores import ScrapyProcesadoresInicial
 from ScrapyTD import ScrapyTD
 from ScrapyTD import ScrapyTDInicial
+from ScrapyArquitectura import ScrapyArquitectura
+from ScrapyArquitectura import ScrapyArquitecturaInicial
 import json
 from discord.ext import tasks
+import urllib3
 
 import configparser
 config = configparser.ConfigParser()
@@ -23,8 +26,9 @@ ID_CHANNEL_OFERTAS = config['DISCORD']['ID_CHANNEL_OFERTAS']
 ID_CHANNEL_PASANTIAS = config['DISCORD']['ID_CHANNEL_PASANTIAS']
 ID_CHANNEL_MICROPROCESADORES = config['DISCORD']['ID_CHANNEL_MICROPROCESADORES']
 ID_CHANNEL_TRANSMISION_DE_DATOS = config['DISCORD']['ID_CHANNEL_TRANSMISION_DE_DATOS']
+ID_CHANNEL_ARQUITECTURA = config['DISCORD']['ID_CHANNEL_ARQUITECTURA']
 
-
+http = urllib3.PoolManager()
 client = discord.Client()
 
 #################
@@ -34,11 +38,13 @@ global ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes
 global ultimaOLId, ultimaOLTitulo, ultimaOLDes
 global ultimaNovedadProcesadores
 global ultimaNovedadTD
+global ultimaNovedadArquitectura
 
 ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = "", "", ""
 ultimaOLId, ultimaOLTitulo, ultimaOLDes = "", "", ""
 ultimaNovedadProcesadores = ""
 ultimaNovedadTD = ""
+ultimaNovedadArquitectura = ""
 
 
 #################
@@ -65,6 +71,8 @@ async def on_message(message):
         await message.channel.send(ultimaNovedadProcesadores)
         await message.channel.send("__**Ultima Novedad de Transmisiones de Datos:**__")
         await message.channel.send(ultimaNovedadTD)
+        await message.channel.send("__**Ultima Novedad de Arquitectura de Computadoras:**__")
+        await message.channel.send(ultimaNovedadArquitectura)
 
     if f'$pps' in message_content:
         await message.channel.send("__**Ultima Pasatia y PPS:**__")
@@ -81,6 +89,10 @@ async def on_message(message):
     if f'$td' in message_content:
         await message.channel.send("__**Ultima Novedad de Transmisiones de Datos:**__")
         await message.channel.send(ultimaNovedadTD)
+    
+    if f'$td' in message_content:
+        await message.channel.send("__**Ultima Novedad de Arquitectura de Computadoras:**__")
+        await message.channel.send(ultimaNovedadArquitectura)
 
 
 #################
@@ -90,59 +102,67 @@ async def on_message(message):
 async def ofertasLaborales():
     # Canal de Ofertas Laborales
     channel = client.get_channel(int(ID_CHANNEL_OFERTAS))
-
+    global ultimoOLEstadoError
+    try:
+        http.request('GET', 'https://www.facet.unt.edu.ar/sbe/ofertas-laborales/', retries=2)
+    except:
+        print(f'Problema de conexion con https://www.facet.unt.edu.ar/sbe/ofertas-laborales/')
+        if ultimoOLEstadoError != True:
+            ultimoOLEstadoError = True
+            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://www.facet.unt.edu.ar/sbe/ofertas-laborales/")
+    else:
+        ultimoOLEstadoError = False
     # Ejecuta Scrapy de Ofertas Laborales
-    ScrapyOL()
-    des = ""
-    global ultimaOLId, ultimaOLTitulo, ultimaOLDes
+        ScrapyOL()
+        des = ""
+        global ultimaOLId, ultimaOLTitulo, ultimaOLDes
+        # Lee el archivo y publica publicaciones nuevas si es que hay
+        ruta = 'data/ofertas.json'
+        with open(ruta) as contenido:
 
-    # Lee el archivo y publica publicaciones nuevas si es que hay
-    ruta = 'ofertas.json'
-    with open(ruta) as contenido:
+            ofertaslaborales = json.load(contenido)
 
-        ofertaslaborales = json.load(contenido)
+            for oferta in ofertaslaborales:
+                des = ""
+                of = oferta
+                id = "".join(of["id"])
+                titulo = "".join(of["titulo"])
+                fecha = "".join(of["fecha"])
+                link = "".join(of["link"])
+                descripcion = of["descripcion"][0]
 
-        for oferta in ofertaslaborales:
-            des = ""
-            of = oferta
-            id = "".join(of["id"])
-            titulo = "".join(of["titulo"])
-            fecha = "".join(of["fecha"])
-            link = "".join(of["link"])
-            descripcion = of["descripcion"][0]
+                for d in descripcion:
+                    if ('\n\u2022' in d):
+                        des = des + d.strip("\t")
+                    elif ('\u2022' in d):
+                        des = des + "\n" + d.strip("\t")
+                    elif ('\u27a2' in d):
+                        des = des + "\n" + d.strip("\t")
+                    elif ('\n' in d):
+                        # des = des + "\n" + d.strip("\t")
+                        des = des + d.strip("\t")
+                    elif (':' in d):
+                        des = des + d.strip("\t") + "\n"
+                    else:
+                        des = des + d.strip("\t")
 
-            for d in descripcion:
-                if ('\n\u2022' in d):
-                    des = des + d.strip("\t")
-                elif ('\u2022' in d):
-                    des = des + "\n" + d.strip("\t")
-                elif ('\u27a2' in d):
-                    des = des + "\n" + d.strip("\t")
-                elif ('\n' in d):
-                    # des = des + "\n" + d.strip("\t")
-                    des = des + d.strip("\t")
-                elif (':' in d):
-                    des = des + d.strip("\t") + "\n"
-                else:
-                    des = des + d.strip("\t")
+                msgOL = "__**Ofertas Laborales**__\n\n" + "**" + titulo + "**" + " \n" + fecha + " \n\n" + des + " \n\n" + "***Ver mas:  ***" + link + " \n\n" + "═════════════════"
 
-            msgOL = "__**Ofertas Laborales**__\n\n" + "**" + titulo + "**" + " \n" + fecha + " \n\n" + des + " \n\n" + "***Ver mas:  ***" + link + " \n\n" + "═════════════════"
-
-            if (id == ultimaOLId):
-                if (titulo == ultimaOLTitulo):
-                    if (des == ultimaOLDes):
-                        ultimaOLId, ultimaOLTitulo, ultimaOLDes = ScrapyOLInicial()
-                        break
+                if (id == ultimaOLId):
+                    if (titulo == ultimaOLTitulo):
+                        if (des == ultimaOLDes):
+                            ultimaOLId, ultimaOLTitulo, ultimaOLDes = ScrapyOLInicial()
+                            break
+                        else:
+                            ultimaOLId, ultimaOLTitulo, ultimaOLDes = ScrapyOLInicial()
+                            await channel.send(msgOL)
+                            break
                     else:
                         ultimaOLId, ultimaOLTitulo, ultimaOLDes = ScrapyOLInicial()
                         await channel.send(msgOL)
                         break
                 else:
-                    ultimaOLId, ultimaOLTitulo, ultimaOLDes = ScrapyOLInicial()
                     await channel.send(msgOL)
-                    break
-            else:
-                await channel.send(msgOL)
 
 # #################
 # # Funcion para revisar y publicar las ultimas Pasantias publicadas (cada 30 min)
@@ -151,59 +171,68 @@ async def ofertasLaborales():
 async def pasantias():
     # Canal de Pasantias
     channel = client.get_channel(int(ID_CHANNEL_PASANTIAS))
+    global ultimoPPSEstadoError
+    try:
+        http.request('GET', 'https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/', retries=2)
+    except:
+        print(f'Problema de conexion con https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/')
+        if ultimoPPSEstadoError != True:
+            ultimoPPSEstadoError = True
+            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/")
+    else:
+        ultimoPPSEstadoError = False
+        # Ejecuta Scrapy de Pasantias
+        ScrapyPPS()
+        des = ""
+        global ultimaPPSTitulo, ultimaPPSId, ultimaPPSDes
 
-    # Ejecuta Scrapy de Pasantias
-    ScrapyPPS()
-    des = ""
-    global ultimaPPSTitulo, ultimaPPSId, ultimaPPSDes
+        # Lee el archivo y publica publicaciones nuevas si es que hay
+        ruta = 'data/pasantias.json'
+        with open(ruta) as contenido:
 
-    # Lee el archivo y publica publicaciones nuevas si es que hay
-    ruta = 'pasantias.json'
-    with open(ruta) as contenido:
+            pasantiasypps = json.load(contenido)
 
-        pasantiasypps = json.load(contenido)
+            for pasantia in pasantiasypps:
+                des = ""
+                pas = pasantia
+                id = "".join(pas["id"])
+                titulo = "".join(pas["titulo"])
+                fecha = "".join(pas["fecha"])
+                link = "".join(pas["link"])
+                descripcion = pas["descripcion"][0]
 
-        for pasantia in pasantiasypps:
-            des = ""
-            pas = pasantia
-            id = "".join(pas["id"])
-            titulo = "".join(pas["titulo"])
-            fecha = "".join(pas["fecha"])
-            link = "".join(pas["link"])
-            descripcion = pas["descripcion"][0]
+                for d in descripcion:
+                    if ('\n\u2022' in d):
+                        des = des + d.strip("\t")
+                    elif ('\u2022' in d):
+                        des = des + "\n" + d.strip("\t")
+                    elif ('\u27a2' in d):
+                        des = des + "\n" + d.strip("\t")
+                    elif ('\n' in d):
+                        # des = des + "\n" + d.strip("\t")
+                        des = des + d.strip("\t")
+                    elif (':' in d):
+                        des = des + d.strip("\t") + "\n"
+                    else:
+                        des = des + d.strip("\t")
 
-            for d in descripcion:
-                if ('\n\u2022' in d):
-                    des = des + d.strip("\t")
-                elif ('\u2022' in d):
-                    des = des + "\n" + d.strip("\t")
-                elif ('\u27a2' in d):
-                    des = des + "\n" + d.strip("\t")
-                elif ('\n' in d):
-                    # des = des + "\n" + d.strip("\t")
-                    des = des + d.strip("\t")
-                elif (':' in d):
-                    des = des + d.strip("\t") + "\n"
-                else:
-                    des = des + d.strip("\t")
+                msgPPS = "__**Pasantias y PPS**__\n\n" + "**" + titulo + "**" + " \n" + fecha + " \n\n" + des + " \n\n" + "***Ver mas:  ***" + link + " \n\n" + "═════════════════"
 
-            msgPPS = "__**Pasantias y PPS**__\n\n" + "**" + titulo + "**" + " \n" + fecha + " \n\n" + des + " \n\n" + "***Ver mas:  ***" + link + " \n\n" + "═════════════════"
-
-            if (id == ultimaPPSId):
-                if (titulo == ultimaPPSTitulo):
-                    if (des == ultimaPPSDes):
-                        ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = ScrapyPPSInicial()
-                        break
+                if (id == ultimaPPSId):
+                    if (titulo == ultimaPPSTitulo):
+                        if (des == ultimaPPSDes):
+                            ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = ScrapyPPSInicial()
+                            break
+                        else:
+                            ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = ScrapyPPSInicial()
+                            await channel.send(msgPPS)
+                            break
                     else:
                         ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = ScrapyPPSInicial()
                         await channel.send(msgPPS)
                         break
                 else:
-                    ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = ScrapyPPSInicial()
                     await channel.send(msgPPS)
-                    break
-            else:
-                await channel.send(msgPPS)
 
 
 # #################
@@ -213,65 +242,128 @@ async def pasantias():
 async def novedadesProcesarores():
     # Canal de la Microprocesadores
     channel = client.get_channel(int(ID_CHANNEL_MICROPROCESADORES))
+    global ultimoProcesadoresEstadoError
+    try:
+        http.request('GET', 'https://microprocesadores.unt.edu.ar/procesadores/', retries=2)
+    except:
+        print(f'Problema de conexion con https://microprocesadores.unt.edu.ar/procesadores/')
+        if ultimoProcesadoresEstadoError != True:
+            ultimoProcesadoresEstadoError = True
+            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/procesadores/")
+    else:
+        ultimoProcesadoresEstadoError = False
+        # Ejecuta Scrapy de Procesadores
+        ScrapyProcesadores()
+        global ultimaNovedadProcesadores
 
-    # Ejecuta Scrapy de Procesadores
-    ScrapyProcesadores()
-    global ultimaNovedadProcesadores
+        # Lee el archivo y publica publicaciones nuevas si es que hay
+        ruta = 'data/novedadesProcesadores.json'
+        with open(ruta) as contenido:
 
-    # Lee el archivo y publica publicaciones nuevas si es que hay
-    ruta = 'novedadesProcesadores.json'
-    with open(ruta) as contenido:
+            novedades = json.load(contenido)
 
-        novedades = json.load(contenido)
-
-        for novedad in novedades:
-            nov = novedad
-            fecha = "".join(nov["fecha"])
-            descripcion = "".join(nov["descripcion"][0])
-
-            msgProcesadores = "📢 __**Nueva publicación**__\n\n" + descripcion + "**\n\nFecha: **" + fecha + "\n\n\n🔗 __**Links de Secciones:**__\n\n" + "***-📰 Cartelera de Novedades:***\n" + "https://microprocesadores.unt.edu.ar/procesadores/" + "\n***-📚 Diapositivas:***\n" + "https://microprocesadores.unt.edu.ar/procesadores/downloads/type/0/" + "\n***-📝 Prácticos/Laboratorios:***\n" + "https://microprocesadores.unt.edu.ar/procesadores/downloads/assignments/" + " \n\n" + "═════════════════"
-
-            if (descripcion != ultimaNovedadProcesadores):
-                await channel.send(msgProcesadores)
-            else:
-                nov = novedades[0]
+            for novedad in novedades:
+                nov = novedad
+                fecha = "".join(nov["fecha"])
                 descripcion = "".join(nov["descripcion"][0])
-                ultimaNovedadProcesadores = descripcion
-                break
+
+                msgProcesadores = "📢 __**Nueva publicación**__\n\n" + descripcion + "**\n\nFecha: **" + fecha + "\n\n\n🔗 __**Links de Secciones:**__\n\n" + "***-📰 Cartelera de Novedades:***\n" + "https://microprocesadores.unt.edu.ar/procesadores/" + "\n***-📚 Diapositivas:***\n" + "https://microprocesadores.unt.edu.ar/procesadores/downloads/type/0/" + "\n***-📝 Prácticos/Laboratorios:***\n" + "https://microprocesadores.unt.edu.ar/procesadores/downloads/assignments/" + " \n\n" + "═════════════════"
+
+                if (descripcion != ultimaNovedadProcesadores):
+                    await channel.send(msgProcesadores)
+                else:
+                    nov = novedades[0]
+                    descripcion = "".join(nov["descripcion"][0])
+                    ultimaNovedadProcesadores = descripcion
+                    break
 
 
 # #################
 # # Funcion para revisar y publicar las ultimas novedades publicadas de Trans. de Datos (cada 15 min)
 # #################
-@tasks.loop(seconds=960)
+@tasks.loop(seconds=900)
 async def novedadesTD():
     # Canal de Transmision de Datos
     channel = client.get_channel(int(ID_CHANNEL_TRANSMISION_DE_DATOS))
+    global ultimoTDEstadoError
+    try:
+        http.request('GET', 'https://microprocesadores.unt.edu.ar/transmision/', retries=2)
+    except:
+        print(f'Problema de conexion con https://microprocesadores.unt.edu.ar/transmision/')
+        if ultimoTDEstadoError != True:
+            ultimoTDEstadoError = True
+            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/transmision/")
+    else:
+        ultimoTDEstadoError = False
+    
+        # Ejecuta Scrapy de Trans. de Datos
+        ScrapyTD()
+        global ultimaNovedadTD
 
-    # Ejecuta Scrapy de Trans. de Datos
-    ScrapyTD()
-    global ultimaNovedadTD
+        # Lee el archivo y publicar publicaciones nuevas si es que hay
+        ruta = 'data/novedadesTD.json'
+        with open(ruta) as contenido:
 
-    # Lee el archivo y publicar publicaciones nuevas si es que hay
-    ruta = 'novedadesTD.json'
-    with open(ruta) as contenido:
+            novedades = json.load(contenido)
 
-        novedades = json.load(contenido)
-
-        for novedad in novedades:
-            nov = novedad
-            fecha = "".join(nov["fecha"])
-            descripcion = "".join(nov["descripcion"][0])
-
-            msgTD = "📢 __**Nueva publicación**__\n\n" + descripcion + "**\n\nFecha: **" + fecha + "\n\n\n🔗 __**Links de Secciones:**__\n\n" + "***-📰 Cartelera de Novedades:***\n" + "https://microprocesadores.unt.edu.ar/transmision/" + "\n***-📚 Diapositivas:***\n" + "https://microprocesadores.unt.edu.ar/transmision/downloads/type/0/" + "\n***-📝 Prácticos/Laboratorios:***\n" + "https://microprocesadores.unt.edu.ar/transmision/downloads/assignments/" + " \n\n" + "═════════════════"
-
-            if (descripcion != ultimaNovedadTD):
-                await channel.send(msgTD)
-            else:
-                nov = novedades[0]
+            for novedad in novedades:
+                nov = novedad
+                fecha = "".join(nov["fecha"])
                 descripcion = "".join(nov["descripcion"][0])
-                ultimaNovedadTD = descripcion
-                break
+
+                msgTD = "📢 __**Nueva publicación**__\n\n" + descripcion + "**\n\nFecha: **" + fecha + "\n\n\n🔗 __**Links de Secciones:**__\n\n" + "***-📰 Cartelera de Novedades:***\n" + "https://microprocesadores.unt.edu.ar/transmision/" + "\n***-📚 Diapositivas:***\n" + "https://microprocesadores.unt.edu.ar/transmision/downloads/type/0/" + "\n***-📝 Prácticos/Laboratorios:***\n" + "https://microprocesadores.unt.edu.ar/transmision/downloads/assignments/" + " \n\n" + "═════════════════"
+
+                if (descripcion != ultimaNovedadTD):
+                    await channel.send(msgTD)
+                else:
+                    nov = novedades[0]
+                    descripcion = "".join(nov["descripcion"][0])
+                    ultimaNovedadTD = descripcion
+                    break
+
+
+# #################
+# # Funcion para revisar y publicar las ultimas novedades publicadas de Arquitectua de Computadoras (cada 15 min)
+# #################
+@tasks.loop(seconds=900)
+async def novedadesArquitectura():
+    # Canal de Transmision de Datos
+    channel = client.get_channel(int(ID_CHANNEL_ARQUITECTURA))
+    global ultimoArquitecturaEstadoError
+    try:
+        http.request('GET', 'https://microprocesadores.unt.edu.ar/arqcom/', retries=2)
+    except:
+        print(f'Problema de conexion con https://microprocesadores.unt.edu.ar/arqcom/')
+        if ultimoArquitecturaEstadoError != True:
+            ultimoArquitecturaEstadoError = True
+            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/arqcom/")
+    else:
+        ultimoArquitecturaEstadoError = False
+    
+        # Ejecuta Scrapy de Trans. de Datos
+        ScrapyArquitectura()
+        global ultimaNovedadArquitectura
+
+        # Lee el archivo y publicar publicaciones nuevas si es que hay
+        ruta = 'data/novedadesArquitectura.json'
+        with open(ruta) as contenido:
+
+            novedades = json.load(contenido)
+
+            for novedad in novedades:
+                nov = novedad
+                fecha = "".join(nov["fecha"])
+                descripcion = "".join(nov["descripcion"][0])
+
+                msgArquitectura = "📢 __**Nueva publicación**__\n\n" + descripcion + "**\n\nFecha: **" + fecha + "\n\n\n🔗 __**Links de Secciones:**__\n\n" + "***-📰 Cartelera de Novedades:***\n" + "https://microprocesadores.unt.edu.ar/arqcom/" + "\n***-📚 Diapositivas:***\n" + "https://microprocesadores.unt.edu.ar/arqcom/downloads/type/0/" + "\n***-📝 Prácticos/Laboratorios:***\n" + "https://microprocesadores.unt.edu.ar/arqcom/downloads/assignments/" + " \n\n" + "═════════════════"
+
+                if (descripcion != ultimaNovedadArquitectura):
+                    await channel.send(msgArquitectura)
+                else:
+                    nov = novedades[0]
+                    descripcion = "".join(nov["descripcion"][0])
+                    ultimaNovedadArquitectura = descripcion
+                    break
 
 
 #################
@@ -279,22 +371,24 @@ async def novedadesTD():
 #################
 @client.event
 async def on_ready():
-    print(f'Hi, the bot its alive!\n {client.user} is now online!')
+    print(f'Hola, el bot facetSocial Scrapy esta vivo!\n {client.user} esta conectado!')
     ofertasLaborales.start()
     pasantias.start()
     novedadesProcesarores.start()
     novedadesTD.start()
+    novedadesArquitectura.start()
 
     global ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes
     global ultimaOLId, ultimaOLTitulo, ultimaOLDes
     global ultimaNovedadProcesadores
     global ultimaNovedadTD
+    global ultimaNovedadArquitectura
 
     ultimaPPSId, ultimaPPSTitulo, ultimaPPSDes = ScrapyPPSInicial()
     ultimaOLId, ultimaOLTitulo, ultimaOLDes = ScrapyOLInicial()
     ultimaNovedadProcesadores = ScrapyProcesadoresInicial()
     ultimaNovedadTD = ScrapyTDInicial()
-
+    ultimaNovedadArquitectura = ScrapyArquitecturaInicial()
 
 #################
 # Token del bot de Discord

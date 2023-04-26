@@ -57,7 +57,7 @@ def ScrapyOL():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "ofertas.json"
+    archivo = "data/ofertas.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -65,7 +65,7 @@ def ScrapyOL():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'ofertas.json',
+            'FEED_URI': 'data/ofertas.json',
             'LOG_ENABLED': log_enabled
         })
         crawler.crawl(FIOfertasLaboralesSpider)
@@ -111,7 +111,7 @@ def ScrapyOLInicial():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "ofertas.json"
+    archivo = "data/ofertas.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -119,7 +119,7 @@ def ScrapyOLInicial():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'ofertas.json',
+            'FEED_URI': 'data/ofertas.json',
             'LOG_ENABLED': log_enabled
         })
         crawler.crawl(FIOfertasLaboralesSpider)
@@ -132,7 +132,7 @@ def ScrapyOLInicial():
     #####################
     # Leo y devuelvo el titulo de la ultima Oferta Laboral publicada
     #####################
-    ruta = 'ofertas.json'
+    ruta = 'data/ofertas.json'
     with open(ruta) as contenido:
         des = ""
         ofertas = json.load(contenido)

@@ -54,7 +54,7 @@ def ScrapyTD():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "novedadesTD.json"
+    archivo = "data/novedadesTD.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -62,7 +62,7 @@ def ScrapyTD():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'novedadesTD.json',
+            'FEED_URI': 'data/novedadesTD.json',
             'LOG_ENABLED': log_enabled
         })
         crawler.crawl(TDSpider)
@@ -111,7 +111,7 @@ def ScrapyTDInicial():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "novedadesTD.json"
+    archivo = "data/novedadesTD.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -119,7 +119,7 @@ def ScrapyTDInicial():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'novedadesTD.json',
+            'FEED_URI': 'data/novedadesTD.json',
             'LOG_ENABLED': log_enabled
         })
         crawler.crawl(TDSpider)
@@ -132,7 +132,7 @@ def ScrapyTDInicial():
     #####################
     # Leo y devuelvo la descripcion de la ultima novedad publicada
     #####################
-    ruta = 'novedadesTD.json'
+    ruta = 'data/novedadesTD.json'
     with open(ruta) as contenido:
         novedad = json.load(contenido)
         n = novedad[0]

@@ -55,7 +55,7 @@ def ScrapyPPS():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "pasantias.json"
+    archivo = "data/pasantias.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -63,7 +63,7 @@ def ScrapyPPS():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'pasantias.json',
+            'FEED_URI': 'data/pasantias.json',
             'LOG_ENABLED': log_enabled
         })
         crawler.crawl(FIPasantiasSpider)
@@ -110,7 +110,7 @@ def ScrapyPPSInicial():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "pasantias.json"
+    archivo = "data/pasantias.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -118,7 +118,7 @@ def ScrapyPPSInicial():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'pasantias.json',
+            'FEED_URI': 'data/pasantias.json',
             'LOG_ENABLED': log_enabled
         })
         crawler.crawl(FIPasantiasSpiderInicial)
@@ -131,7 +131,7 @@ def ScrapyPPSInicial():
     #####################
     # Leo y devuelvo el titulo de la ultima PPS publicada
     #####################
-    ruta = 'pasantias.json'
+    ruta = 'data/pasantias.json'
     with open(ruta) as contenido:
         des = ""
         pasantias = json.load(contenido)

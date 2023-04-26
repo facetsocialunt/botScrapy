@@ -16,21 +16,21 @@ config.read('config.ini')
 log_enabled = config['DEBUG']['LOG_ENABLED']
 
 ################################
-# Func. ScrapyProcesadores: Scrapea/Recolecta la info de la pagina principal de Sistema con Microprocesadores
+# Func. ScrapyArquitectura: Scrapea/Recolecta la informacion de la pagina principal de Arquitectura de Computadoras
 ################################
-def ScrapyProcesadores():
+def ScrapyArquitectura():
     class Novedad(Item):
         id = Field()
         fecha = Field()
         descripcion = Field()
 
-    class ProcesadoresSpider(Spider):
+    class ArquitecturaSpider(Spider):
         name = "NovedadesSpider"
 
         custom_settings = {
             "USER-AGENT": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/71.0.3578.80 Chrome/71.0.3578.80 Safari/537.36"
         }
-        start_urls = ['https://microprocesadores.unt.edu.ar/procesadores/']
+        start_urls = ['https://microprocesadores.unt.edu.ar/arqcom/']
 
         def parse(self, response):
             sel = Selector(response)
@@ -54,7 +54,7 @@ def ScrapyProcesadores():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "data/novedadesProcesadores.json"
+    archivo = "data/novedadesArquitectura.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -62,10 +62,10 @@ def ScrapyProcesadores():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'data/novedadesProcesadores.json',
+            'FEED_URI': 'data/novedadesArquitectura.json',
             'LOG_ENABLED': log_enabled
         })
-        crawler.crawl(ProcesadoresSpider)
+        crawler.crawl(ArquitecturaSpider)
         crawler.start()
 
     processProcesadores = Process(target=crawl)
@@ -74,21 +74,21 @@ def ScrapyProcesadores():
 
 
 ################################
-# Func. ScrapyProcesadoresInicial: Scrapea/Recolecta solo el titulo de la ultima novedad
+# Func. ScrapyArquitecturaInicial: Scrapea/Recolecta solo el titulo de la ultima novedad
 ################################
-def ScrapyProcesadoresInicial():
+def ScrapyArquitecturaInicial():
     class Novedad(Item):
         id = Field()
         fecha = Field()
         descripcion = Field()
 
-    class ProcesadoresSpider(Spider):
+    class ArquitecturaSpider(Spider):
         name = "NovedadesSpider"
 
         custom_settings = {
             "USER-AGENT": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/71.0.3578.80 Chrome/71.0.3578.80 Safari/537.36"
         }
-        start_urls = ['https://microprocesadores.unt.edu.ar/procesadores/']
+        start_urls = ['https://microprocesadores.unt.edu.ar/arqcom/']
 
         def parse(self, response):
             sel = Selector(response)
@@ -111,7 +111,7 @@ def ScrapyProcesadoresInicial():
     ################################
     # Correr la funcion Scrapy sin terminal
     ################################
-    archivo = "data/novedadesProcesadores.json"
+    archivo = "data/novedadesArquitectura.json"
 
     if (os.path.isfile(archivo)):
         remove(archivo)
@@ -119,10 +119,10 @@ def ScrapyProcesadoresInicial():
     def crawl():
         crawler = CrawlerProcess({
             'FEED_FORMAT': 'json',
-            'FEED_URI': 'data/novedadesProcesadores.json',
+            'FEED_URI': 'data/novedadesArquitectura.json',
             'LOG_ENABLED': log_enabled
         })
-        crawler.crawl(ProcesadoresSpider)
+        crawler.crawl(ArquitecturaSpider)
         crawler.start()
 
     processProcesadores = Process(target=crawl)
@@ -132,7 +132,7 @@ def ScrapyProcesadoresInicial():
     #####################
     # Leo y devuelvo la descripcion de la ultima novedad publicada
     #####################
-    ruta = 'data/novedadesProcesadores.json'
+    ruta = 'data/novedadesArquitectura.json'
     with open(ruta) as contenido:
         novedad = json.load(contenido)
         n = novedad[0]
