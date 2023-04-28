@@ -27,6 +27,7 @@ ID_CHANNEL_PASANTIAS = config['DISCORD']['ID_CHANNEL_PASANTIAS']
 ID_CHANNEL_MICROPROCESADORES = config['DISCORD']['ID_CHANNEL_MICROPROCESADORES']
 ID_CHANNEL_TRANSMISION_DE_DATOS = config['DISCORD']['ID_CHANNEL_TRANSMISION_DE_DATOS']
 ID_CHANNEL_ARQUITECTURA = config['DISCORD']['ID_CHANNEL_ARQUITECTURA']
+ID_CHANNEL_CMD = config['DISCORD']['ID_CHANNEL_CMD']
 
 http = urllib3.PoolManager()
 client = discord.Client()
@@ -45,6 +46,7 @@ ultimaOLId, ultimaOLTitulo, ultimaOLDes = "", "", ""
 ultimaNovedadProcesadores = ""
 ultimaNovedadTD = ""
 ultimaNovedadArquitectura = ""
+
 
 
 #################
@@ -90,7 +92,7 @@ async def on_message(message):
         await message.channel.send("__**Ultima Novedad de Transmisiones de Datos:**__")
         await message.channel.send(ultimaNovedadTD)
     
-    if f'$td' in message_content:
+    if f'$arq' in message_content:
         await message.channel.send("__**Ultima Novedad de Arquitectura de Computadoras:**__")
         await message.channel.send(ultimaNovedadArquitectura)
 
@@ -101,17 +103,23 @@ async def on_message(message):
 @tasks.loop(seconds=1800)
 async def ofertasLaborales():
     # Canal de Ofertas Laborales
-    channel = client.get_channel(int(ID_CHANNEL_OFERTAS))
     global ultimoOLEstadoError
+    channel = client.get_channel(int(ID_CHANNEL_OFERTAS))
     try:
         http.request('GET', 'https://www.facet.unt.edu.ar/sbe/ofertas-laborales/', retries=2)
     except:
         print(f'Problema de conexion con https://www.facet.unt.edu.ar/sbe/ofertas-laborales/')
-        if ultimoOLEstadoError != True:
-            ultimoOLEstadoError = True
-            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://www.facet.unt.edu.ar/sbe/ofertas-laborales/")
+        if ultimoOLEstadoError < 2:
+            if ultimoOLEstadoError == 0:
+                # Case: 0 (Primera vez sin conexion. Se espera a la siguiente vuelta)
+                ultimoOLEstadoError += 1
+            elif ultimoOLEstadoError == 1:
+                # Case: 1 (Segunda vez sin conexion. Se envia mensaje)
+                await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://www.facet.unt.edu.ar/sbe/ofertas-laborales/")
+                ultimoOLEstadoError += 1    
     else:
-        ultimoOLEstadoError = False
+        ultimoOLEstadoError = 0
+        print("hay conexion: variable puesta en 0")
     # Ejecuta Scrapy de Ofertas Laborales
         ScrapyOL()
         des = ""
@@ -176,11 +184,16 @@ async def pasantias():
         http.request('GET', 'https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/', retries=2)
     except:
         print(f'Problema de conexion con https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/')
-        if ultimoPPSEstadoError != True:
-            ultimoPPSEstadoError = True
-            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/")
+        if ultimoPPSEstadoError < 2:
+            if ultimoPPSEstadoError == 0:
+                # Case: 0 (Primera vez sin conexion. Se espera a la siguiente vuelta)
+                ultimoPPSEstadoError += 1
+            elif ultimoPPSEstadoError == 1:
+                # Case: 1 (Segunda vez sin conexion. Se envia mensaje)
+                await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://www.facet.unt.edu.ar/sbe/pasantias-y-pps/")
+                ultimoPPSEstadoError += 1
     else:
-        ultimoPPSEstadoError = False
+        ultimoPPSEstadoError = 0
         # Ejecuta Scrapy de Pasantias
         ScrapyPPS()
         des = ""
@@ -247,11 +260,16 @@ async def novedadesProcesarores():
         http.request('GET', 'https://microprocesadores.unt.edu.ar/procesadores/', retries=2)
     except:
         print(f'Problema de conexion con https://microprocesadores.unt.edu.ar/procesadores/')
-        if ultimoProcesadoresEstadoError != True:
-            ultimoProcesadoresEstadoError = True
-            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/procesadores/")
+        if ultimoProcesadoresEstadoError < 2:
+            if ultimoProcesadoresEstadoError == 0:
+                # Case: 0 (Primera vez sin conexion. Se espera a la siguiente vuelta)
+                ultimoProcesadoresEstadoError += 1
+            elif ultimoProcesadoresEstadoError == 1:
+                # Case: 1 (Segunda vez sin conexion. Se envia mensaje)
+                await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/procesadores/")
+                ultimoProcesadoresEstadoError += 1
     else:
-        ultimoProcesadoresEstadoError = False
+        ultimoProcesadoresEstadoError = 0
         # Ejecuta Scrapy de Procesadores
         ScrapyProcesadores()
         global ultimaNovedadProcesadores
@@ -290,11 +308,16 @@ async def novedadesTD():
         http.request('GET', 'https://microprocesadores.unt.edu.ar/transmision/', retries=2)
     except:
         print(f'Problema de conexion con https://microprocesadores.unt.edu.ar/transmision/')
-        if ultimoTDEstadoError != True:
-            ultimoTDEstadoError = True
-            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/transmision/")
+        if ultimoTDEstadoError < 2:
+            if ultimoTDEstadoError == 0:
+                # Case: 0 (Primera vez sin conexion. Se espera a la siguiente vuelta)
+                ultimoTDEstadoError += 1
+            elif ultimoTDEstadoError == 1:
+                # Case: 1 (Segunda vez sin conexion. Se envia mensaje)
+                await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/transmision/")
+                ultimoTDEstadoError += 1
     else:
-        ultimoTDEstadoError = False
+        ultimoTDEstadoError = 0
     
         # Ejecuta Scrapy de Trans. de Datos
         ScrapyTD()
@@ -334,11 +357,16 @@ async def novedadesArquitectura():
         http.request('GET', 'https://microprocesadores.unt.edu.ar/arqcom/', retries=2)
     except:
         print(f'Problema de conexion con https://microprocesadores.unt.edu.ar/arqcom/')
-        if ultimoArquitecturaEstadoError != True:
-            ultimoArquitecturaEstadoError = True
-            await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/arqcom/")
+        if ultimoArquitecturaEstadoError < 2:
+            if ultimoArquitecturaEstadoError == 0:
+                # Case: 0 (Primera vez sin conexion. Se espera a la siguiente vuelta)
+                ultimoArquitecturaEstadoError += 1
+            elif ultimoArquitecturaEstadoError == 1:
+                # Case: 1 (Segunda vez sin conexion. Se envia mensaje)
+                await channel.send(" ** Nuestro servicio de notificaciones no se encuentra disponible debido a problemas externos ** ❗ \n\n Por favor controla tus notificaiones manualmente en https://microprocesadores.unt.edu.ar/arqcom/")
+                ultimoArquitecturaEstadoError += 1
     else:
-        ultimoArquitecturaEstadoError = False
+        ultimoArquitecturaEstadoError = 0
     
         # Ejecuta Scrapy de Trans. de Datos
         ScrapyArquitectura()
